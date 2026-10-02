@@ -11,7 +11,7 @@ from flask_socketio import SocketIO, emit
 #  CONFIGURATION
 # ==========================================
 ESP32_IP = "10.101.122.229" 
-CAM_URL = "http://10.101.122.19:8080/video"
+CAM_URL = "http://192.168.29.141:8080/video"
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
@@ -20,7 +20,8 @@ lock = threading.Lock()
 frame_lock = threading.Lock()
 latest_raw_frame = None
 latest_boxes = []
-global_stats = {"severity": "Normal", "crack_count": 0, "distance": -1}
+latest_mask = None
+global_stats = {"severity": "Normal", "crack_count": 0, "distance": 15.0, "distance_override": 15.0}
 
 # ==========================================
 #  TELEMETRY & CAMERA THREADS
@@ -126,7 +127,7 @@ def is_valid_crack(contour, gray):
         
     return True
 def process_vision():
-    global latest_raw_frame, latest_boxes, global_stats
+    global latest_raw_frame, latest_boxes, latest_mask, global_stats
     last_emit_time = 0
     
     while True:
@@ -162,17 +163,47 @@ def process_vision():
         # Find contours
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
+        # ==========================================
+        #  DISTANCE GATING: ACTIVE ONLY AT 1 - 20 CM
+        # ==========================================
+        dist_override = global_stats.get("distance_override")
+        current_distance = dist_override if dist_override is not None else global_stats.get("distance", -1)
+
+        in_range = (1.0 <= current_distance <= 20.0)
+
+        # If away from 1-20 cm (or target out of range), SHOW NOTHING!
+        if not in_range:
+            with lock:
+                latest_boxes = []
+                latest_mask = np.zeros((480, 640), dtype=np.uint8)
+                if current_distance > 20.0:
+                    sev_status = f"OUT OF RANGE ({current_distance:.1f}cm > 20cm)"
+                elif 0 <= current_distance < 1.0:
+                    sev_status = f"TOO CLOSE ({current_distance:.1f}cm < 1cm)"
+                else:
+                    sev_status = "OUT OF RANGE (Target 1-20cm)"
+                global_stats["severity"] = sev_status
+                global_stats["crack_count"] = 0
+
+            now = time.time()
+            if now - last_emit_time > 0.1:
+                socketio.emit('telemetry_vision', {
+                    'cracks': 0,
+                    'severity': global_stats["severity"],
+                    'in_range': False,
+                    'distance': current_distance
+                })
+                last_emit_time = now
+            time.sleep(0.03)
+            continue
+
+        # In-Range: Analyze contours for cracks
         new_boxes = []
         crack_count = 0
-        severity = "Normal"
-        current_distance = global_stats.get("distance", -1)
+        severity = "CLEAN"
 
         for cnt in contours:
             if is_valid_crack(cnt, gray):
-                # Enforce distance (1-20cm). If sensor offline/error (-1), we allow detection for testing!
-                if current_distance != -1 and (current_distance < 1 or current_distance > 20):
-                    continue
-                    
                 crack_count += 1
                 x, y, w, h = cv2.boundingRect(cnt)
                 
@@ -191,18 +222,24 @@ def process_vision():
         # Update and Emit
         now = time.time()
         if now - last_emit_time > 0.1:
-            socketio.emit('telemetry_vision', {'cracks': crack_count, 'severity': severity})
+            socketio.emit('telemetry_vision', {
+                'cracks': crack_count,
+                'severity': severity,
+                'in_range': True,
+                'distance': current_distance
+            })
             last_emit_time = now
         
         with lock:
             latest_boxes = new_boxes
+            latest_mask = edges.copy()
             global_stats["severity"] = severity
             global_stats["crack_count"] = crack_count
             
         time.sleep(0.01)
 
 def generate_frames():
-    global latest_raw_frame, latest_boxes
+    global latest_raw_frame, latest_boxes, global_stats
     while True:
         with frame_lock:
             if latest_raw_frame is None:
@@ -218,14 +255,52 @@ def generate_frames():
         
         with lock:
             boxes = latest_boxes
+            sev = global_stats.get("severity", "Normal")
         
         # Draw the "Advanced Crack Detection" visuals
         for x, y, w, h, color, label in boxes:
             cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
+        if "OUT OF RANGE" in sev or "TOO CLOSE" in sev:
+            # HUD Banner indicating target is out of the 1-20cm inspection range
+            cv2.rectangle(frame, (80, 10), (560, 45), (0, 0, 0), -1)
+            cv2.rectangle(frame, (80, 10), (560, 45), (0, 140, 255), 2)
+            cv2.putText(frame, "OUT OF RANGE: TARGET MUST BE 1 - 20 CM", (100, 34),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 165, 255), 2)
+
         (flag, encodedImage) = cv2.imencode(".jpg", frame)
         if not flag: continue
+        yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
+        time.sleep(1/30.0)
+
+def generate_mask_frames():
+    global latest_mask, global_stats
+    while True:
+        with lock:
+            mask = latest_mask.copy() if latest_mask is not None else None
+            sev = global_stats.get("severity", "Normal")
+        
+        if mask is None:
+            frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(frame, "COMPUTING CANNY MASK...", (130, 240),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+        elif "OUT OF RANGE" in sev or "TOO CLOSE" in sev:
+            # Away from 1-20cm: SHOW NOTHING (blank mask with range warning)
+            frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(frame, "TARGET OUT OF RANGE (>20cm)", (140, 220),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
+            cv2.putText(frame, "CRACK DETECTION ACTIVE ONLY AT 1 - 20 CM", (95, 260),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (148, 163, 184), 1)
+        else:
+            frame = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+            cv2.putText(frame, "CANNY PROCESSED MASK", (15, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        (flag, encodedImage) = cv2.imencode(".jpg", frame)
+        if not flag:
+            time.sleep(0.01)
+            continue
         yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
         time.sleep(1/30.0)
 
@@ -235,13 +310,54 @@ def index(): return render_template('index.html')
 @app.route('/video_feed')
 def video_feed(): return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/mask_feed')
+def mask_feed(): return Response(generate_mask_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/torch')
+def torch():
+    state = request.args.get('state', 'off')
+    try:
+        cam_base = "/".join(CAM_URL.split('/')[:3])
+        if state == 'on':
+            requests.get(f"{cam_base}/enabletorch", timeout=1.5)
+        else:
+            requests.get(f"{cam_base}/disabletorch", timeout=1.5)
+        return "OK"
+    except Exception as e:
+        return str(e), 500
+
+@app.route('/camera_zoom')
+def camera_zoom():
+    level = request.args.get('zoom', '1')
+    try:
+        cam_base = "/".join(CAM_URL.split('/')[:3])
+        requests.get(f"{cam_base}/ptz?zoom={level}", timeout=1.5)
+        return "OK"
+    except Exception as e:
+        return str(e), 500
+
+@app.route('/set_distance')
+def set_distance():
+    val = request.args.get('dist', '15')
+    if val == 'live':
+        global_stats["distance_override"] = None
+        d = global_stats.get("distance", -1)
+        socketio.emit('telemetry_hw', {'mode': 'manual', 'distance': d, 'source': 'live'})
+    else:
+        try:
+            d = float(val)
+            global_stats["distance_override"] = d
+            socketio.emit('telemetry_hw', {'mode': 'manual', 'distance': d, 'source': 'manual'})
+        except: pass
+    return "OK"
+
 @app.route('/control')
 def control():
     cmd = request.args.get('cmd')
     if cmd:
         try:
             if cmd in ['manual']:
-                requests.get(f"http://{ESP32_IP}/mode?m={cmd}", timeout=2.0)
+                requests.get(f"http://{ESP32_IP}/mode?m={cmd}", timeout=1.0)
             elif cmd in ['auto']:
                 return "Auto Mode Disabled", 403
             else:

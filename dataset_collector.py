@@ -3,7 +3,7 @@ import time
 import os
 
 # Configuration
-CAM_URL = "http://10.101.122.19:8080/video"
+CAM_URL = "http://192.168.29.141:8080/video"
 OUTPUT_DIR = "dataset_cracks"
 
 if not os.path.exists(OUTPUT_DIR):
