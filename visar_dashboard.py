@@ -11,7 +11,7 @@ from flask_socketio import SocketIO, emit
 #  CONFIGURATION
 # ==========================================
 ESP32_IP = "10.101.122.229" 
-CAM_URL = "http://192.168.29.141:8080/video"
+CAM_URL = "http://10.101.122.19:8080/video"
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
