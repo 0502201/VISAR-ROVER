@@ -1,0 +1,26 @@
+# Python Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & build files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Captured test datasets / photos
+dataset_cracks/
+
+# Local IDE & editor files
+.vscode/
+.idea/
+.clangd/
+compile_flags.txt
+
+# OS metadata
+Thumbs.db
+Desktop.ini
+.DS_Store

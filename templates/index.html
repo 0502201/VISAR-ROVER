@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISAR | Advanced Fused Vision</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        :root {
+            --primary: #fbbf24; /* Amber/Gold */
+            --secondary: #1e293b;
+            --bg-grad: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --glass: rgba(255, 255, 255, 0.05);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --text-main: #f8fafc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+
+        body {
+            background: var(--bg-grad);
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass);
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 1rem;
+        }
+
+        .logo-box { display: flex; align-items: center; gap: 10px; }
+        .logo { font-weight: 900; font-size: 1.2rem; color: var(--primary); letter-spacing: 2px; }
+        .badge { background: var(--danger); font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; font-weight: 800; }
+
+        /* MAIN GRID */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .card {
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label { font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 2.2rem; font-weight: 900; margin-top: 5px; }
+        .severity-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; margin-top: 10px; }
+
+        /* CENTER: MISSION FEED */
+        .center-feed {
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(251, 191, 36, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #feed-img { width: 100%; height: 100%; object-fit: cover; }
+
+        .hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hud-item {
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            padding: 5px 12px;
+            border-radius: 4px;
+            border-left: 3px solid var(--primary);
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        /* CONTROLS */
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .key {
+            height: 60px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.1s;
+        }
+
+        .key.active { background: var(--primary); color: #000; box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); border: none; }
+
+        .btn-action {
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        .btn-auto { background: var(--success); color: white; width: 100%; }
+        .btn-manual { background: var(--warning); color: white; width: 100%; margin-top: 8px; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-box">
+            <div class="logo">VISCD</div>
+            <div class="badge">MISSION ACTIVE</div>
+        </div>
+        <div id="clock" style="font-weight: 700; color: #94a3b8;">--:--:--</div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- LEFT: VISION STATS -->
+        <div class="side-panel">
+            <div class="card">
+                <div class="stat-label">Detected Cracks</div>
+                <div class="stat-value" id="crack-count">0</div>
+            </div>
+            <div class="card">
+                <div class="stat-label">Inspection Status</div>
+                <div id="severity-label" class="severity-badge" style="background: var(--success);">CLEAN</div>
+            </div>
+        </div>
+
+        <!-- CENTER: FEED -->
+        <div class="center-feed">
+            <img id="feed-img" src="/video_feed" alt="Vision Feed Offline">
+            <div class="hud-overlay">
+                <div class="hud-item">LIVE | FUSION.ENG.V2</div>
+                <div class="hud-item" style="border-color: #ef4444;">FPS: 30.0</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: HARDWARE -->
+        <div class="side-panel">
+
+            <div class="card">
+                <div class="stat-label">Control Mode</div>
+                <div class="stat-value" id="mode-val" style="font-size: 1.5rem;">MANUAL</div>
+            </div>
+            
+            <button class="btn-action btn-manual" onclick="setMode('manual')" style="margin-top: 0;">🎮 RESET CONTROLS</button>
+
+            <div class="keypad">
+                <div style="grid-column: 2;" class="key" id="k-w">W</div>
+                <div style="grid-row: 2;" class="key" id="k-a">A</div>
+                <div style="grid-row: 2;" class="key" id="k-s">S</div>
+                <div style="grid-row: 2;" class="key" id="k-d">D</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        socket.on('telemetry_vision', function(data) {
+            document.getElementById('crack-count').innerText = data.cracks;
+            const sev = document.getElementById('severity-label');
+            sev.innerText = data.severity.toUpperCase();
+            sev.style.background = data.severity.includes("CRACK") ? "var(--danger)" : "var(--success)";
+        });
+
+        socket.on('telemetry_hw', function(data) {
+            document.getElementById('mode-val').innerText = data.mode.toUpperCase();
+        });
+
+        function send(cmd) { fetch(`/control?cmd=${cmd}`); }
+        function setMode(mode) { fetch(`/control?cmd=${mode}`); }
+
+        // Keyboard Controls
+        let keyActive = null;
+        document.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if(keyActive === k) return;
+            if(['w','a','s','d'].includes(k)) {
+                document.getElementById('k-'+k).classList.add('active');
+                if(k === 'w') send('forward');
+                if(k === 'a') send('left');
+                if(k === 's') send('reverse');
+                if(k === 'd') send('right');
+                keyActive = k;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if(['w','a','s','d'].includes(k)) {
+                document.getElementById('k-'+k).classList.remove('active');
+                if(keyActive === k) {
+                    send('stop');
+                    keyActive = null;
+                }
+            }
+        });
+
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+    </script>
+</body>
+</html>
