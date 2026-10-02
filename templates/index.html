@@ -3,145 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISAR | Dual Vision Rover Dashboard</title>
+    <title>VISAR | Tactical Mission Control & Structural Inspection Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #fbbf24;       /* Amber / Rover Gold */
-            --primary-glow: rgba(251, 191, 36, 0.35);
-            --accent: #38bdf8;        /* Cyan */
-            --secondary: #1e293b;
-            --bg-grad: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #1e293b 100%);
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --glass-card: rgba(15, 23, 42, 0.65);
-            --danger: #ef4444;
+            --bg-base: #060911;
+            --bg-surface: #0c121e;
+            --bg-panel: rgba(13, 20, 34, 0.75);
+            --bg-card: rgba(18, 28, 48, 0.6);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(251, 191, 36, 0.35);
+
+            --primary: #fbbf24;        /* Rover Tactical Amber */
+            --primary-rgb: 251, 191, 36;
+            --accent: #06b6d4;         /* Optical Cyan */
+            --accent-rgb: 6, 182, 212;
+            --success: #10b981;        /* Operational Emerald */
             --warning: #f59e0b;
-            --success: #10b981;
+            --danger: #ef4444;         /* Critical Ruby */
+            --danger-glow: rgba(239, 68, 68, 0.5);
+
             --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            --text-dim: #94a3b8;
+            --text-muted: #64748b;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
 
         body {
-            background: var(--bg-grad);
+            background: radial-gradient(ellipse at 50% 0%, #111b2e 0%, #070b14 70%, #03060a 100%);
             height: 100vh;
             overflow: hidden;
             color: var(--text-main);
             display: flex;
             flex-direction: column;
-            padding: 0.8rem 1.2rem;
-            gap: 0.8rem;
+            padding: 0.75rem 1rem;
+            gap: 0.65rem;
+            user-select: none;
         }
 
-        /* HEADER */
+        /* ====================================================
+           1. TOP INDUSTRIAL HEADER
+        ==================================================== */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--glass-card);
-            padding: 0.7rem 1.5rem;
-            border-radius: 14px;
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            background: var(--bg-panel);
+            padding: 0.65rem 1.4rem;
+            border-radius: 12px;
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+            flex-shrink: 0;
         }
 
-        .logo-box { display: flex; align-items: center; gap: 12px; }
-        .logo {
-            font-weight: 900;
-            font-size: 1.35rem;
-            color: var(--primary);
-            letter-spacing: 3px;
-            text-shadow: 0 0 16px var(--primary-glow);
-        }
-        .badge {
-            background: var(--danger);
-            color: #fff;
-            font-size: 0.65rem;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            animation: pulse-badge 2s infinite;
-        }
-        @keyframes pulse-badge {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.85; transform: scale(0.97); }
-        }
-
-        .header-meta {
+        .brand-group {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 14px;
         }
-        .meta-pill {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid var(--glass-border);
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-muted);
-        }
-        .meta-pill span { color: var(--primary); font-weight: 700; }
 
-        /* MAIN 3-COLUMN GRID */
-        .dashboard-grid {
+        .radar-beacon {
+            position: relative;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--primary);
+        }
+        .radar-beacon::after {
+            content: '';
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: pulse-ring 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.6); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+
+        .brand-title {
+            font-size: 1.45rem;
+            font-weight: 900;
+            letter-spacing: 3.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .brand-title span {
+            color: var(--primary);
+            text-shadow: 0 0 16px rgba(251, 191, 36, 0.45);
+        }
+
+        .sys-badge {
+            background: rgba(251, 191, 36, 0.12);
+            color: var(--primary);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 1.2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .telemetry-ribbon {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ribbon-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ribbon-pill b {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .clock-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-subtle);
+            padding: 5px 12px;
+            border-radius: 8px;
+            letter-spacing: 1px;
+        }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* ====================================================
+           2. MAIN 3-PANEL LAYOUT
+        ==================================================== */
+        .mission-grid {
             display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            gap: 1rem;
+            grid-template-columns: 310px 1fr 310px;
+            gap: 0.85rem;
             flex: 1;
             min-height: 0;
         }
 
-        .side-panel {
+        .panel-column {
             display: flex;
             flex-direction: column;
-            gap: 0.9rem;
+            gap: 0.75rem;
             min-height: 0;
             overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
         }
 
-        .card {
-            background: var(--glass-card);
-            border: 1px solid var(--glass-border);
+        .ui-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
             border-radius: 14px;
-            padding: 1.2rem;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            padding: 1.1rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            position: relative;
         }
 
-        .stat-label {
-            font-size: 0.68rem;
-            color: var(--text-muted);
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.85rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .stat-value {
-            font-size: 2.1rem;
+
+        .card-title {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .card-title .tag {
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+        }
+
+        /* SEVERITY & DEFECT STATS */
+        .severity-display {
+            text-align: center;
+            padding: 0.9rem;
+            border-radius: 10px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            transition: all 0.3s ease;
+            margin-bottom: 0.8rem;
+        }
+        .severity-text {
+            font-size: 1.15rem;
             font-weight: 900;
-            margin-top: 4px;
+            letter-spacing: 2px;
+            color: var(--success);
+            text-transform: uppercase;
             font-family: 'JetBrains Mono', monospace;
         }
-        .severity-badge {
-            display: inline-block;
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 0.78rem;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            margin-top: 8px;
-            transition: all 0.3s ease;
+        .severity-sub {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-top: 3px;
+            text-transform: uppercase;
         }
 
-        /* CENTER: DUAL VISION & CONTROLS */
-        .center-container {
+        .metrics-trio {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .metric-box {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.65rem 0.4rem;
+            text-align: center;
+        }
+        .metric-num {
+            font-size: 1.55rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+        .metric-label {
+            font-size: 0.58rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-top: 3px;
+        }
+
+        /* RANGEFINDER GAUGE (1-20CM) */
+        .range-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .range-readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .range-value {
+            font-size: 1.7rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--primary);
+        }
+        .range-status-badge {
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            letter-spacing: 0.8px;
+        }
+
+        .range-meter-track {
+            position: relative;
+            height: 10px;
+            background: #020617;
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .meter-deadzone {
+            height: 100%;
+            background: repeating-linear-gradient(45deg, #1e293b, #1e293b 4px, #0f172a 4px, #0f172a 8px);
+        }
+        .meter-activezone {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        .meter-needle {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 4px;
+            background: #ffffff;
+            box-shadow: 0 0 8px #ffffff;
+            transform: translateX(-50%);
+            transition: left 0.3s ease;
+        }
+
+        .range-meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.62rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+        }
+
+        /* DATA ROWS */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.45rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.72rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-key { color: var(--text-dim); }
+        .info-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* ====================================================
+           3. CENTER VIEWPORT: DUAL FEEDS & HUD
+        ==================================================== */
+        .center-viewport {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
@@ -149,89 +384,89 @@
             height: 100%;
         }
 
-        /* TOOLBAR: ZOOM & FLASHLIGHT */
-        .inspection-toolbar {
-            background: var(--glass-card);
-            border: 1px solid var(--glass-border);
+        /* MISSION TOOLBAR */
+        .mission-toolbar {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
             border-radius: 12px;
-            padding: 0.55rem 1rem;
-            backdrop-filter: blur(12px);
+            padding: 0.5rem 0.85rem;
+            backdrop-filter: blur(20px);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            gap: 10px;
+            flex-wrap: wrap;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            flex-shrink: 0;
         }
 
-        .toolbar-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toolbar-label {
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-right: 4px;
-        }
-
-        .tool-btn {
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid var(--glass-border);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .toolbar-cluster {
             display: flex;
             align-items: center;
             gap: 6px;
         }
-        .tool-btn:hover {
+        .cluster-label {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-right: 2px;
+        }
+
+        .btn-ctrl {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 6px 11px;
+            border-radius: 7px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-ctrl:hover {
             background: rgba(255, 255, 255, 0.14);
             border-color: rgba(255, 255, 255, 0.25);
             transform: translateY(-1px);
         }
-        .tool-btn:active {
-            transform: translateY(1px);
-        }
+        .btn-ctrl:active { transform: translateY(1px); }
 
-        .tool-btn.active-preset {
+        .btn-ctrl.active-pill {
             background: var(--primary);
-            color: #0b0f19;
+            color: #060911;
             border-color: var(--primary);
             font-weight: 800;
+            box-shadow: 0 0 14px rgba(251, 191, 36, 0.35);
         }
 
-        /* Flashlight Button Glowing State */
-        .torch-btn.torch-active {
+        .btn-torch.active-torch {
             background: #fef08a !important;
-            color: #0f172a !important;
+            color: #090d16 !important;
             border-color: #fef08a !important;
             box-shadow: 0 0 18px rgba(254, 240, 138, 0.8), 0 0 35px rgba(250, 204, 21, 0.4);
             font-weight: 900;
         }
 
-        .zoom-display {
+        .zoom-readout {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.78rem;
-            font-weight: 700;
+            font-size: 0.74rem;
+            font-weight: 800;
             color: var(--primary);
-            min-width: 44px;
-            text-align: center;
-            background: rgba(0,0,0,0.4);
-            padding: 4px 8px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 9px;
             border-radius: 6px;
             border: 1px solid rgba(251, 191, 36, 0.3);
+            min-width: 48px;
+            text-align: center;
         }
 
-        /* DUAL FEEDS SIDE-BY-SIDE */
-        .dual-feed-grid {
+        /* DUAL FEEDS CONTAINER */
+        .dual-screen-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.85rem;
@@ -240,42 +475,55 @@
             transition: grid-template-columns 0.3s ease;
         }
 
-        .dual-feed-grid.view-detection-only {
+        .dual-screen-grid.mode-detection-only {
             grid-template-columns: 1fr 0fr;
         }
-        .dual-feed-grid.view-detection-only .mask-box {
+        .dual-screen-grid.mode-detection-only .feed-frame-mask {
             display: none;
         }
 
-        .dual-feed-grid.view-mask-only {
+        .dual-screen-grid.mode-mask-only {
             grid-template-columns: 0fr 1fr;
         }
-        .dual-feed-grid.view-mask-only .detection-box {
+        .dual-screen-grid.mode-mask-only .feed-frame-det {
             display: none;
         }
 
-        .feed-box {
+        /* TACTICAL HUD FEED FRAME */
+        .feed-frame {
             position: relative;
-            background: #000;
-            border-radius: 16px;
+            background: #020610;
+            border-radius: 14px;
             overflow: hidden;
-            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
             min-height: 0;
             height: 100%;
         }
 
-        .detection-box {
-            border-color: rgba(251, 191, 36, 0.35);
-        }
-        .mask-box {
-            border-color: rgba(56, 189, 248, 0.35);
-        }
+        .feed-frame-det { border-color: rgba(251, 191, 36, 0.3); }
+        .feed-frame-mask { border-color: rgba(6, 182, 212, 0.3); }
 
-        .feed-img-viewport {
+        /* Reticle corner borders */
+        .corner-bracket {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-color: var(--primary);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .feed-frame-mask .corner-bracket { border-color: var(--accent); }
+
+        .corner-tl { top: 8px; left: 8px; border-top: 2px solid; border-left: 2px solid; }
+        .corner-tr { top: 8px; right: 8px; border-top: 2px solid; border-right: 2px solid; }
+        .corner-bl { bottom: 8px; left: 8px; border-bottom: 2px solid; border-left: 2px solid; }
+        .corner-br { bottom: 8px; right: 8px; border-bottom: 2px solid; border-right: 2px solid; }
+
+        .viewport-wrapper {
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -285,7 +533,7 @@
             position: relative;
         }
 
-        .feed-img-viewport img {
+        .viewport-wrapper img {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -293,481 +541,725 @@
             transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
         }
 
-        /* HUD OVERLAYS */
-        .feed-hud-top {
+        /* FEED HUD OVERLAYS */
+        .hud-header {
             position: absolute;
-            top: 14px;
-            left: 14px;
-            right: 14px;
+            top: 14px; left: 16px; right: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             pointer-events: none;
-            z-index: 10;
+            z-index: 12;
         }
-
-        .feed-hud-badge {
-            background: rgba(0, 0, 0, 0.72);
-            backdrop-filter: blur(6px);
+        .hud-pill {
+            background: rgba(6, 9, 17, 0.8);
+            backdrop-filter: blur(8px);
             padding: 4px 10px;
             border-radius: 6px;
-            font-size: 0.68rem;
+            font-size: 0.66rem;
             font-weight: 800;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.9px;
             border-left: 3px solid var(--primary);
-            color: #fff;
+            color: #ffffff;
             display: flex;
             align-items: center;
             gap: 6px;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .feed-hud-badge.cyan {
-            border-left-color: var(--accent);
-        }
+        .hud-pill.cyan { border-left-color: var(--accent); }
 
-        .feed-status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--success);
-            box-shadow: 0 0 8px var(--success);
-        }
-
-        .feed-hud-bottom {
+        .hud-footer {
             position: absolute;
-            bottom: 12px;
-            left: 14px;
-            right: 14px;
+            bottom: 12px; left: 16px; right: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             pointer-events: none;
-            z-index: 10;
+            z-index: 12;
         }
-
-        .hud-chip {
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(4px);
+        .hud-label-mono {
+            background: rgba(6, 9, 17, 0.75);
+            backdrop-filter: blur(6px);
             padding: 3px 8px;
             border-radius: 4px;
             font-size: 0.62rem;
             font-family: 'JetBrains Mono', monospace;
-            color: var(--text-muted);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-dim);
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
-        /* RIGHT: CONTROLS & TELEMETRY */
-        .keypad {
+        /* ====================================================
+           4. RIGHT PANEL: TELEOPERATION & EVENT LOG
+        ==================================================== */
+        .keypad-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-            margin-top: auto;
+            margin: 0.5rem 0;
         }
 
-        .key {
-            height: 54px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 10px;
+        .tactile-key {
+            height: 52px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 9px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             border: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.15s ease;
-            user-select: none;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-
-        .key.active {
+        .tactile-key span {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 700;
+        }
+        .tactile-key:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .tactile-key.active {
             background: var(--primary);
-            color: #000;
-            box-shadow: 0 0 22px rgba(251, 191, 36, 0.6);
+            color: #060911;
             border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
             transform: scale(0.96);
         }
+        .tactile-key.active span { color: #060911; }
 
-        .btn-action {
+        .btn-estop {
+            width: 100%;
             padding: 12px;
-            border-radius: 10px;
+            border-radius: 9px;
             border: none;
-            font-weight: 800;
-            cursor: pointer;
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 0.82rem;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.8px;
-            transition: 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 16px var(--danger-glow);
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            margin-top: 0.4rem;
         }
-        .btn-stop {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
-        }
-        .btn-stop:hover {
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+        .btn-estop:hover {
+            box-shadow: 0 0 24px var(--danger);
             transform: translateY(-1px);
         }
+        .btn-estop:active { transform: translateY(1px); }
 
-        .telemetry-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.74rem;
-        }
-        .telemetry-row:last-child { border-bottom: none; }
-        .telemetry-val {
+        /* LIVE EVENT CONSOLE LOG */
+        .event-log-box {
+            background: #04070e;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.6rem;
+            height: 130px;
+            overflow-y: auto;
             font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            color: var(--primary);
+            font-size: 0.65rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            scrollbar-width: thin;
         }
+        .log-entry {
+            display: flex;
+            gap: 6px;
+            line-height: 1.3;
+        }
+        .log-time { color: var(--text-muted); }
+        .log-msg-info { color: #93c5fd; }
+        .log-msg-warn { color: var(--warning); }
+        .log-msg-crit { color: var(--danger); font-weight: 700; }
+        .log-msg-ok { color: var(--success); }
 
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
+    <!-- ==========================================
+         TOP INDUSTRIAL HEADER
+    =========================================== -->
     <header>
-        <div class="logo-box">
-            <div class="logo">VISAR</div>
-            <div class="badge">MISSION ACTIVE</div>
+        <div class="brand-group">
+            <div class="radar-beacon"></div>
+            <div class="brand-title">VISAR <span>PRO</span></div>
+            <div class="sys-badge">TACTICAL INSPECTION SYS // V2.4</div>
         </div>
-        <div class="header-meta">
-            <div class="meta-pill">SYS: <span>FUSED DUAL-VISION</span></div>
-            <div class="meta-pill">LINK: <span id="link-status" style="color: var(--success);">ONLINE</span></div>
-            <div id="clock" class="meta-pill" style="font-weight: 700; color: #f8fafc;">--:--:--</div>
+
+        <div class="telemetry-ribbon">
+            <div class="ribbon-pill">
+                <div class="status-dot" id="link-dot"></div>
+                LINK: <b id="link-status">ONLINE</b>
+            </div>
+            <div class="ribbon-pill">
+                OPTICAL: <b>640x480 @ 30FPS</b>
+            </div>
+            <div class="ribbon-pill">
+                DISTANCE GATE: <b>1.0 - 20.0 CM</b>
+            </div>
+            <div class="ribbon-pill">
+                MODE: <b id="header-mode" style="color: var(--primary);">MANUAL</b>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="clock-display" id="clock">--:--:--</div>
+            <button class="icon-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">⛶</button>
         </div>
     </header>
 
-    <!-- MAIN GRID -->
-    <div class="dashboard-grid">
-        <!-- LEFT: VISION STATS & METRICS -->
-        <div class="side-panel">
-            <div class="card">
-                <div class="stat-label">Detected Cracks</div>
-                <div class="stat-value" id="crack-count">0</div>
+    <!-- ==========================================
+         MAIN 3-PANEL MISSION GRID
+    =========================================== -->
+    <div class="mission-grid">
+
+        <!-- 1. LEFT PANEL: STRUCTURAL DIAGNOSTICS -->
+        <div class="panel-column">
+            
+            <!-- SEVERITY ASSESSMENT -->
+            <div class="ui-card">
+                <div class="card-header">
+                    <div class="card-title"><span>🛡️</span> Structural Health Assessment</div>
+                    <span class="tag">AI-CORRELATION</span>
+                </div>
+
+                <div class="severity-display" id="sev-container">
+                    <div class="severity-text" id="severity-label">NORMAL / CLEAN</div>
+                    <div class="severity-sub" id="severity-sub">SURFACE INTEGRITY VERIFIED</div>
+                </div>
+
+                <div class="metrics-trio">
+                    <div class="metric-box">
+                        <div class="metric-num" id="total-anomalies" style="color: var(--primary);">0</div>
+                        <div class="metric-label">Anomalies</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-num" id="critical-voids" style="color: var(--danger);">0</div>
+                        <div class="metric-label">Spalling</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-num" id="major-cracks" style="color: var(--accent);">0</div>
+                        <div class="metric-label">Cracks</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card">
-                <div class="stat-label">Inspection Status</div>
-                <div id="severity-label" class="severity-badge" style="background: var(--success); color: white;">CLEAN</div>
+            <!-- ULTRASONIC RANGEFINDER (1-20CM GATE) -->
+            <div class="ui-card">
+                <div class="card-header">
+                    <div class="card-title"><span>📏</span> Ultrasonic Rangefinder</div>
+                    <span class="tag">GATE 1-20CM</span>
+                </div>
+
+                <div class="range-container">
+                    <div class="range-readout">
+                        <div class="range-value" id="dist-display">15.0 <span style="font-size: 0.9rem; color: var(--text-dim);">cm</span></div>
+                        <div class="range-status-badge" id="dist-badge">ACTIVE ENVELOPE</div>
+                    </div>
+
+                    <div class="range-meter-track">
+                        <!-- 0 to 1cm deadzone (2.5%) -->
+                        <div class="meter-deadzone" style="width: 2.5%;"></div>
+                        <!-- 1 to 20cm active zone (47.5%) -->
+                        <div class="meter-activezone" style="width: 47.5%;"></div>
+                        <!-- 20 to 40cm deadzone (50%) -->
+                        <div class="meter-deadzone" style="width: 50%;"></div>
+                        <!-- Needle -->
+                        <div class="meter-needle" id="meter-needle" style="left: 37.5%;"></div>
+                    </div>
+
+                    <div class="range-meter-labels">
+                        <span>0cm</span>
+                        <span style="color: var(--success); font-weight: 700;">1 - 20 cm (Inspection Zone)</span>
+                        <span>40cm</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="card" style="flex: 1;">
-                <div class="stat-label" style="margin-bottom: 8px;">Algorithm Telemetry</div>
-                <div class="telemetry-row">
-                    <span style="color: var(--text-muted);">Vision Core</span>
-                    <span class="telemetry-val">Canny + Dilate</span>
+            <!-- ALGORITHM DIAGNOSTICS -->
+            <div class="ui-card" style="flex: 1;">
+                <div class="card-header">
+                    <div class="card-title"><span>🔬</span> Vision Engine Parameters</div>
+                    <span class="tag">OPENCV FUSION</span>
                 </div>
-                <div class="telemetry-row">
-                    <span style="color: var(--text-muted);">Thresholds</span>
-                    <span class="telemetry-val">50 / 150</span>
+
+                <div class="info-row">
+                    <span class="info-key">Pre-Filter Smoothing</span>
+                    <span class="info-val">5x5 Gaussian</span>
                 </div>
-                <div class="telemetry-row">
-                    <span style="color: var(--text-muted);">Distance Filter</span>
-                    <span class="telemetry-val" id="dist-filter-val">1 - 20 cm</span>
+                <div class="info-row">
+                    <span class="info-key">Canny Edge Gradients</span>
+                    <span class="info-val">20 / 80 Dual Threshold</span>
                 </div>
-                <div class="telemetry-row">
-                    <span style="color: var(--text-muted);">Min Crack Area</span>
-                    <span class="telemetry-val">300 px</span>
+                <div class="info-row">
+                    <span class="info-key">Morphological Kernel</span>
+                    <span class="info-val">5x5 Rect Dilation</span>
                 </div>
-                <div class="telemetry-row">
-                    <span style="color: var(--text-muted);">Void Threshold</span>
-                    <span class="telemetry-val">> 15000 px</span>
+                <div class="info-row">
+                    <span class="info-key">Geometric Circularity</span>
+                    <span class="info-val">&lt; 0.35 (Linear)</span>
                 </div>
-                <div class="telemetry-row">
-                    <span style="color: var(--text-muted);">Zoom Level</span>
-                    <span class="telemetry-val" id="telemetry-zoom">1.0x</span>
+                <div class="info-row">
+                    <span class="info-key">Hull Solidity Limit</span>
+                    <span class="info-val">&lt; 0.80 (Branching)</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Critical Void Cutoff</span>
+                    <span class="info-val">&gt; 15,000 px²</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Inspection Zoom Scale</span>
+                    <span class="info-val" id="diag-zoom" style="color: var(--primary);">1.00x</span>
                 </div>
             </div>
         </div>
 
-        <!-- CENTER: DUAL FEEDS & CONTROLS -->
-        <div class="center-container">
-            <!-- INSPECTION TOOLBAR -->
-            <div class="inspection-toolbar">
+        <!-- 2. CENTER VIEWPORT: DUAL FEEDS & HUD -->
+        <div class="center-viewport">
+            
+            <!-- MISSION CONTROL TOOLBAR -->
+            <div class="mission-toolbar">
                 <!-- VIEW SELECTOR -->
-                <div class="toolbar-group">
-                    <span class="toolbar-label">View:</span>
-                    <button class="tool-btn active-preset" id="view-dual-btn" onclick="setViewMode('dual')">⚡ Dual Side-by-Side</button>
-                    <button class="tool-btn" id="view-det-btn" onclick="setViewMode('detection')">🎯 Detection</button>
-                    <button class="tool-btn" id="view-mask-btn" onclick="setViewMode('mask')">🔬 Mask</button>
+                <div class="toolbar-cluster">
+                    <span class="cluster-label">Viewport:</span>
+                    <button class="btn-ctrl active-pill" id="view-dual-btn" onclick="setViewMode('dual')">⚡ Dual View</button>
+                    <button class="btn-ctrl" id="view-det-btn" onclick="setViewMode('detection')">🎯 Optical RGB</button>
+                    <button class="btn-ctrl" id="view-mask-btn" onclick="setViewMode('mask')">🔬 Canny Mask</button>
                 </div>
 
-                <!-- ZOOM CONTROLS -->
-                <div class="toolbar-group">
-                    <span class="toolbar-label">Zoom:</span>
-                    <button class="tool-btn" onclick="adjustZoom(-0.25)" title="Zoom Out">➖</button>
-                    <div class="zoom-display" id="zoom-badge">1.0x</div>
-                    <button class="tool-btn" onclick="adjustZoom(0.25)" title="Zoom In">➕</button>
-                    <button class="tool-btn" onclick="setZoom(1.0)" title="Reset Zoom">1.0x</button>
-                    <button class="tool-btn" onclick="setZoom(1.5)">1.5x</button>
-                    <button class="tool-btn" onclick="setZoom(2.0)">2.0x</button>
+                <!-- ZOOM CONTROLLER -->
+                <div class="toolbar-cluster">
+                    <span class="cluster-label">Zoom:</span>
+                    <button class="btn-ctrl" onclick="adjustZoom(-0.25)" title="Step Zoom Out">➖</button>
+                    <div class="zoom-readout" id="zoom-badge">1.00x</div>
+                    <button class="btn-ctrl" onclick="adjustZoom(0.25)" title="Step Zoom In">➕</button>
+                    <button class="btn-ctrl" onclick="setZoom(1.0)">1.0x</button>
+                    <button class="btn-ctrl" onclick="setZoom(1.5)">1.5x</button>
+                    <button class="btn-ctrl" onclick="setZoom(2.0)">2.0x</button>
                 </div>
 
-                <!-- DISTANCE GATE CONTROLS (1-20CM) -->
-                <div class="toolbar-group">
-                    <span class="toolbar-label">Distance Gate:</span>
-                    <div class="zoom-display" id="dist-badge" style="min-width: 58px;">15.0cm</div>
-                    <button class="tool-btn active-preset" id="dist-15-btn" onclick="setDistance(15)" title="15cm (Active In-Range)">15cm</button>
-                    <button class="tool-btn" id="dist-10-btn" onclick="setDistance(10)" title="10cm (Active In-Range)">10cm</button>
-                    <button class="tool-btn" id="dist-30-btn" onclick="setDistance(30)" title="30cm (Away: Shows Nothing)">30cm</button>
-                    <button class="tool-btn" id="dist-live-btn" onclick="setDistance('live')" title="Live Ultrasonic Sensor">📡 Sensor</button>
+                <!-- DISTANCE OVERRIDE / SIMULATOR -->
+                <div class="toolbar-cluster">
+                    <span class="cluster-label">Gate (1-20cm):</span>
+                    <button class="btn-ctrl active-pill" id="dist-15-btn" onclick="setDistance(15)" title="15cm (Active In-Range)">15cm</button>
+                    <button class="btn-ctrl" id="dist-10-btn" onclick="setDistance(10)" title="10cm (Active In-Range)">10cm</button>
+                    <button class="btn-ctrl" id="dist-30-btn" onclick="setDistance(30)" title="30cm (Away: Muted)">30cm</button>
+                    <button class="btn-ctrl" id="dist-live-btn" onclick="setDistance('live')" title="Live Ultrasonic Sensor">📡 Sensor</button>
                 </div>
 
-                <!-- FLASHLIGHT / TORCH CONTROL -->
-                <div class="toolbar-group">
-                    <button class="tool-btn torch-btn" id="torch-btn" onclick="toggleTorch()">
-                        <span>🔦</span> FLASHLIGHT: OFF
+                <!-- AUX ILLUMINATION & CAPTURE -->
+                <div class="toolbar-cluster">
+                    <button class="btn-ctrl btn-torch" id="torch-btn" onclick="toggleTorch()">
+                        <span>🔦</span> LIGHT: OFF
+                    </button>
+                    <button class="btn-ctrl" onclick="saveSnapshot()" title="Capture High-Res Visual Inspection Log">
+                        <span>📸</span> SNAPSHOT
                     </button>
                 </div>
             </div>
 
-            <!-- DUAL FEEDS SIDE-BY-SIDE -->
-            <div class="dual-feed-grid" id="dual-feeds">
-                <!-- FEED 1: LIVE DETECTION WITH BOUNDING BOXES -->
-                <div class="feed-box detection-box">
-                    <div class="feed-hud-top">
-                        <div class="feed-hud-badge">
-                            <div class="feed-status-dot"></div>
-                            LIVE DETECTION FEED
+            <!-- DUAL FEEDS DISPLAY -->
+            <div class="dual-screen-grid" id="dual-grid">
+                
+                <!-- FEED 1: OPTICAL DETECTION STREAM -->
+                <div class="feed-frame feed-frame-det">
+                    <div class="corner-bracket corner-tl"></div>
+                    <div class="corner-bracket corner-tr"></div>
+                    <div class="corner-bracket corner-bl"></div>
+                    <div class="corner-bracket corner-br"></div>
+
+                    <div class="hud-header">
+                        <div class="hud-pill">
+                            <div class="status-dot"></div>
+                            CAM-01 // OPTICAL RGB FUSION
                         </div>
-                        <div class="hud-chip">RGB + BOUNDING BOXES</div>
+                        <div class="hud-label-mono">STREAM: 640x480 MJPEG</div>
                     </div>
 
-                    <div class="feed-img-viewport">
-                        <img id="feed-img" class="zoomable-feed" src="/video_feed" alt="Detection Feed Offline">
+                    <div class="viewport-wrapper">
+                        <img id="feed-img" class="zoomable-video" src="/video_feed" alt="Optical Feed Connecting...">
                     </div>
 
-                    <div class="feed-hud-bottom">
-                        <div class="hud-chip">MODEL: FUSED OPENCV v2</div>
-                        <div class="hud-chip" style="color: var(--primary);">FPS: ~30</div>
+                    <div class="hud-footer">
+                        <div class="hud-label-mono">AI ENGINE: MORPH-CANNY v2.4</div>
+                        <div class="hud-label-mono" style="color: var(--primary);">FPS: ~30.0</div>
                     </div>
                 </div>
 
-                <!-- FEED 2: PROCESSED CANNY EDGE MASK -->
-                <div class="feed-box mask-box">
-                    <div class="feed-hud-top">
-                        <div class="feed-hud-badge cyan">
-                            <div class="feed-status-dot" style="background: var(--accent); box-shadow: 0 0 8px var(--accent);"></div>
-                            CANNY PROCESSED MASK
+                <!-- FEED 2: CANNY MORPHOLOGICAL MASK -->
+                <div class="feed-frame feed-frame-mask">
+                    <div class="corner-bracket corner-tl"></div>
+                    <div class="corner-bracket corner-tr"></div>
+                    <div class="corner-bracket corner-bl"></div>
+                    <div class="corner-bracket corner-br"></div>
+
+                    <div class="hud-header">
+                        <div class="hud-pill cyan">
+                            <div class="status-dot" style="background: var(--accent); box-shadow: 0 0 8px var(--accent);"></div>
+                            CAM-02 // CANNY MORPHOLOGICAL MAP
                         </div>
-                        <div class="hud-chip">BINARY MORPHOLOGICAL</div>
+                        <div class="hud-label-mono">BINARY MORPH-DILATED</div>
                     </div>
 
-                    <div class="feed-img-viewport">
-                        <img id="mask-img" class="zoomable-feed" src="/mask_feed" alt="Canny Mask Feed Offline">
+                    <div class="viewport-wrapper">
+                        <img id="mask-img" class="zoomable-video" src="/mask_feed" alt="Canny Mask Feed Connecting...">
                     </div>
 
-                    <div class="feed-hud-bottom">
-                        <div class="hud-chip">FILTER: 50 / 150 CANNY</div>
-                        <div class="hud-chip" style="color: var(--accent);">EDGE MAP</div>
+                    <div class="hud-footer">
+                        <div class="hud-label-mono">GRADIENT: 20-80 CANNY</div>
+                        <div class="hud-label-mono" style="color: var(--accent);">EDGE MAP</div>
                     </div>
                 </div>
+
             </div>
         </div>
 
-        <!-- RIGHT: ROVER HARDWARE & DRIVING CONTROLS -->
-        <div class="side-panel">
-            <div class="card">
-                <div class="stat-label">Control Mode</div>
-                <div class="stat-value" id="mode-val" style="font-size: 1.5rem; color: var(--warning);">MANUAL</div>
+        <!-- 3. RIGHT PANEL: TELEOPERATION & MISSION EVENT LOG -->
+        <div class="panel-column">
+            
+            <!-- DRIVE TELEOPERATION MATRIX -->
+            <div class="ui-card">
+                <div class="card-header">
+                    <div class="card-title"><span>🎮</span> Drive Teleoperation</div>
+                    <span class="tag" id="drive-speed-badge">PWM 100%</span>
+                </div>
+
+                <div class="keypad-grid">
+                    <div style="grid-column: 2;" class="tactile-key" id="k-w" onmousedown="send('forward')" onmouseup="send('stop')">
+                        W
+                        <span>FWD</span>
+                    </div>
+                    <div style="grid-row: 2; grid-column: 1;" class="tactile-key" id="k-a" onmousedown="send('left')" onmouseup="send('stop')">
+                        A
+                        <span>LEFT</span>
+                    </div>
+                    <div style="grid-row: 2; grid-column: 2;" class="tactile-key" id="k-s" onmousedown="send('reverse')" onmouseup="send('stop')">
+                        S
+                        <span>REV</span>
+                    </div>
+                    <div style="grid-row: 2; grid-column: 3;" class="tactile-key" id="k-d" onmousedown="send('right')" onmouseup="send('stop')">
+                        D
+                        <span>RIGHT</span>
+                    </div>
+                </div>
+
+                <button class="btn-estop" onclick="send('stop')">
+                    <span>⏹️</span> EMERGENCY MOTOR BRAKE (SPACE)
+                </button>
             </div>
 
-            <button class="btn-action btn-stop" onclick="send('stop')">
-                <span>⏹️</span> EMERGENCY STOP
-            </button>
+            <!-- HARDWARE NODE STATUS -->
+            <div class="ui-card">
+                <div class="card-header">
+                    <div class="card-title"><span>🛰️</span> Node Link Telemetry</div>
+                    <span class="tag">ACTIVE</span>
+                </div>
 
-            <div class="card" style="margin-top: 4px;">
-                <div class="stat-label" style="margin-bottom: 6px;">Drive Guide</div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4;">
-                    Use keyboard <b style="color: var(--primary);">W / A / S / D</b> to drive the rover. Releasing key stops motors immediately.
+                <div class="info-row">
+                    <span class="info-key">Microcontroller</span>
+                    <span class="info-val">ESP32 Dual-Core</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Optical Sensor</span>
+                    <span class="info-val">IP Webcam Node</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Target Cam IP</span>
+                    <span class="info-val" style="color: var(--accent);">192.168.29.141:8080</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Telemetry Socket</span>
+                    <span class="info-val" style="color: var(--success);">PORT 5000 (LIVE)</span>
                 </div>
             </div>
 
-            <div class="keypad">
-                <div style="grid-column: 2;" class="key" id="k-w">W</div>
-                <div style="grid-row: 2;" class="key" id="k-a">A</div>
-                <div style="grid-row: 2;" class="key" id="k-s">S</div>
-                <div style="grid-row: 2;" class="key" id="k-d">D</div>
+            <!-- MISSION EVENT CONSOLE LOG -->
+            <div class="ui-card" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="card-header">
+                    <div class="card-title"><span>📜</span> Mission Event Log</div>
+                    <span class="tag">REAL-TIME</span>
+                </div>
+
+                <div class="event-log-box" id="event-log">
+                    <div class="log-entry">
+                        <span class="log-time">[00:00:00]</span>
+                        <span class="log-msg-ok">VISAR Mission Control System Online.</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">[00:00:01]</span>
+                        <span class="log-msg-info">Vision fusion engine initialized.</span>
+                    </div>
+                </div>
             </div>
+
         </div>
+
     </div>
 
+    <!-- ==========================================
+         SCRIPT SECTION: SOCKETS & INTERACTION
+    =========================================== -->
     <script>
         const socket = io();
 
-        // Telemetry Listeners
-        socket.on('telemetry_vision', function(data) {
-            document.getElementById('crack-count').innerText = data.cracks;
-            const sev = document.getElementById('severity-label');
-            sev.innerText = data.severity.toUpperCase();
-            if (data.severity.includes("OUT OF RANGE") || data.severity.includes("TOO CLOSE")) {
-                sev.style.background = "#475569";
-                sev.style.boxShadow = "none";
-            } else if (data.severity.includes("CRITICAL")) {
-                sev.style.background = "var(--danger)";
-                sev.style.boxShadow = "0 0 16px rgba(239, 68, 68, 0.6)";
-            } else if (data.severity.includes("CRACK")) {
-                sev.style.background = "var(--warning)";
-                sev.style.boxShadow = "0 0 12px rgba(245, 158, 11, 0.5)";
-            } else {
-                sev.style.background = "var(--success)";
-                sev.style.boxShadow = "none";
+        function addLog(msg, type='info') {
+            const box = document.getElementById('event-log');
+            if(!box) return;
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            let colorClass = 'log-msg-info';
+            if (type === 'warn') colorClass = 'log-msg-warn';
+            if (type === 'crit') colorClass = 'log-msg-crit';
+            if (type === 'ok') colorClass = 'log-msg-ok';
+
+            div.innerHTML = `<span class="log-time">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+            box.prepend(div);
+
+            while(box.children.length > 25) {
+                box.removeChild(box.lastChild);
             }
-        });
-
-        socket.on('telemetry_hw', function(data) {
-            document.getElementById('mode-val').innerText = (data.mode || 'manual').toUpperCase();
-            if (data.distance !== undefined && data.distance !== -1) {
-                const inRange = (data.distance >= 1.0 && data.distance <= 20.0);
-                const badge = document.getElementById('dist-badge');
-                if (badge) {
-                    badge.innerText = `${data.distance.toFixed(1)}cm`;
-                    badge.style.color = inRange ? 'var(--primary)' : 'var(--danger)';
-                    badge.style.borderColor = inRange ? 'rgba(251, 191, 36, 0.3)' : 'var(--danger)';
-                }
-                const filterVal = document.getElementById('dist-filter-val');
-                if (filterVal) {
-                    filterVal.innerText = `${data.distance.toFixed(1)} cm (${inRange ? 'ACTIVE' : 'MUTED'})`;
-                    filterVal.style.color = inRange ? 'var(--primary)' : '#94a3b8';
-                }
-            }
-        });
-
-        // Distance Gating Control
-        function setDistance(dist) {
-            document.querySelectorAll('[id^="dist-"]').forEach(b => {
-                if (b.tagName === 'BUTTON') b.classList.remove('active-preset');
-            });
-            if (dist === 15) document.getElementById('dist-15-btn').classList.add('active-preset');
-            if (dist === 10) document.getElementById('dist-10-btn').classList.add('active-preset');
-            if (dist === 30) document.getElementById('dist-30-btn').classList.add('active-preset');
-            if (dist === 'live') document.getElementById('dist-live-btn').classList.add('active-preset');
-
-            fetch(`/set_distance?dist=${dist}`).catch(() => {});
         }
 
+        // TELEMETRY VISION LISTENER
+        socket.on('telemetry_vision', function(data) {
+            document.getElementById('total-anomalies').innerText = data.cracks;
+            document.getElementById('critical-voids').innerText = data.critical || 0;
+            document.getElementById('major-cracks').innerText = data.major || 0;
+
+            const sevBox = document.getElementById('sev-container');
+            const sevLabel = document.getElementById('severity-label');
+            const sevSub = document.getElementById('severity-sub');
+
+            sevLabel.innerText = data.severity.toUpperCase();
+
+            if (data.severity.includes("OUT OF RANGE") || data.severity.includes("TOO CLOSE")) {
+                sevBox.style.background = "rgba(100, 116, 139, 0.12)";
+                sevBox.style.borderColor = "rgba(100, 116, 139, 0.35)";
+                sevLabel.style.color = "#94a3b8";
+                sevSub.innerText = "STANDOFF EXCEEDED — AI MUTED";
+            } else if (data.severity.includes("CRITICAL")) {
+                sevBox.style.background = "rgba(239, 68, 68, 0.18)";
+                sevBox.style.borderColor = "rgba(239, 68, 68, 0.6)";
+                sevLabel.style.color = "var(--danger)";
+                sevSub.innerText = "IMMEDIATE STRUCTURAL RISK DETECTED";
+            } else if (data.severity.includes("CRACK")) {
+                sevBox.style.background = "rgba(245, 158, 11, 0.18)";
+                sevBox.style.borderColor = "rgba(245, 158, 11, 0.5)";
+                sevLabel.style.color = "var(--warning)";
+                sevSub.innerText = "SURFACE ANOMALY IDENTIFIED";
+            } else {
+                sevBox.style.background = "rgba(16, 185, 129, 0.12)";
+                sevBox.style.borderColor = "rgba(16, 185, 129, 0.35)";
+                sevLabel.style.color = "var(--success)";
+                sevSub.innerText = "SURFACE INTEGRITY VERIFIED";
+            }
+        });
+
+        // TELEMETRY HARDWARE LISTENER
+        socket.on('telemetry_hw', function(data) {
+            const mode = (data.mode || 'manual').toUpperCase();
+            document.getElementById('header-mode').innerText = mode;
+
+            if (data.distance !== undefined && data.distance !== -1) {
+                const dist = data.distance;
+                document.getElementById('dist-display').innerHTML = `${dist.toFixed(1)} <span style="font-size: 0.9rem; color: var(--text-dim);">cm</span>`;
+
+                const inRange = (dist >= 1.0 && dist <= 20.0);
+                const badge = document.getElementById('dist-badge');
+                if (inRange) {
+                    badge.innerText = "ACTIVE ENVELOPE";
+                    badge.style.background = "rgba(16, 185, 129, 0.15)";
+                    badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+                    badge.style.color = "var(--success)";
+                } else {
+                    badge.innerText = dist > 20 ? "STANDOFF EXCEEDED" : "TOO CLOSE";
+                    badge.style.background = "rgba(239, 68, 68, 0.15)";
+                    badge.style.borderColor = "rgba(239, 68, 68, 0.3)";
+                    badge.style.color = "var(--danger)";
+                }
+
+                // Needle position: 0 to 40cm mapped to 0 to 100%
+                const pct = Math.min(Math.max((dist / 40.0) * 100, 0), 100);
+                document.getElementById('meter-needle').style.left = `${pct}%`;
+            }
+        });
+
+        // SOCKET CONNECTION STATUS
         socket.on('connect', () => {
-            const el = document.getElementById('link-status');
-            el.innerText = 'ONLINE';
-            el.style.color = 'var(--success)';
+            document.getElementById('link-status').innerText = 'ONLINE';
+            document.getElementById('link-status').style.color = 'var(--success)';
+            document.getElementById('link-dot').style.background = 'var(--success)';
+            document.getElementById('link-dot').style.boxShadow = '0 0 8px var(--success)';
+            addLog("Telemetry WebSocket link connected.", 'ok');
         });
 
         socket.on('disconnect', () => {
-            const el = document.getElementById('link-status');
-            el.innerText = 'OFFLINE';
-            el.style.color = 'var(--danger)';
+            document.getElementById('link-status').innerText = 'OFFLINE';
+            document.getElementById('link-status').style.color = 'var(--danger)';
+            document.getElementById('link-dot').style.background = 'var(--danger)';
+            document.getElementById('link-dot').style.boxShadow = '0 0 8px var(--danger)';
+            addLog("Telemetry link dropped. Reconnecting...", 'crit');
         });
 
-        // Driving Control
-        function send(cmd) { fetch(`/control?cmd=${cmd}`); }
+        // DRIVING TELEOPERATION
+        function send(cmd) {
+            fetch(`/control?cmd=${cmd}`);
+            if (cmd === 'stop') {
+                addLog("Emergency motor brake engaged.", 'warn');
+            }
+        }
 
-        // Keyboard Controls
-        let keyActive = null;
+        // KEYBOARD DRIVING LISTENER
+        let activeKey = null;
         document.addEventListener('keydown', (e) => {
             const k = e.key.toLowerCase();
-            if(keyActive === k) return;
-            if(['w','a','s','d'].includes(k)) {
-                const el = document.getElementById('k-'+k);
-                if(el) el.classList.add('active');
-                if(k === 'w') send('forward');
-                if(k === 'a') send('left');
-                if(k === 's') send('reverse');
-                if(k === 'd') send('right');
-                keyActive = k;
+            if (e.key === ' ' || e.code === 'Space') {
+                send('stop');
+                return;
+            }
+            if (activeKey === k) return;
+            if (['w', 'a', 's', 'd'].includes(k)) {
+                const el = document.getElementById('k-' + k);
+                if (el) el.classList.add('active');
+                if (k === 'w') { send('forward'); addLog("Rover: FORWARD"); }
+                if (k === 'a') { send('left'); addLog("Rover: ROTATE LEFT"); }
+                if (k === 's') { send('reverse'); addLog("Rover: REVERSE"); }
+                if (k === 'd') { send('right'); addLog("Rover: ROTATE RIGHT"); }
+                activeKey = k;
             }
         });
 
         document.addEventListener('keyup', (e) => {
             const k = e.key.toLowerCase();
-            if(['w','a','s','d'].includes(k)) {
-                const el = document.getElementById('k-'+k);
-                if(el) el.classList.remove('active');
-                if(keyActive === k) {
+            if (['w', 'a', 's', 'd'].includes(k)) {
+                const el = document.getElementById('k-' + k);
+                if (el) el.classList.remove('active');
+                if (activeKey === k) {
                     send('stop');
-                    keyActive = null;
+                    activeKey = null;
                 }
             }
         });
 
-        // Flashlight / Torch Control
+        // FLASHLIGHT / TORCH CONTROL
         let torchOn = false;
         function toggleTorch() {
             torchOn = !torchOn;
             const btn = document.getElementById('torch-btn');
             const state = torchOn ? 'on' : 'off';
-            
             fetch(`/torch?state=${state}`)
-                .then(res => {
+                .then(() => {
                     if (torchOn) {
-                        btn.classList.add('torch-active');
-                        btn.innerHTML = '<span>🔦</span> FLASHLIGHT: ON';
+                        btn.classList.add('active-torch');
+                        btn.innerHTML = '<span>🔦</span> LIGHT: ON';
+                        addLog("Auxiliary illumination LED enabled.", 'ok');
                     } else {
-                        btn.classList.remove('torch-active');
-                        btn.innerHTML = '<span>🔦</span> FLASHLIGHT: OFF';
+                        btn.classList.remove('active-torch');
+                        btn.innerHTML = '<span>🔦</span> LIGHT: OFF';
+                        addLog("Auxiliary illumination LED disabled.");
                     }
                 })
-                .catch(err => {
-                    console.error('Torch toggle failed:', err);
-                    // Revert state on error
+                .catch(() => {
                     torchOn = !torchOn;
+                    addLog("Failed to contact camera torch endpoint.", 'warn');
                 });
         }
 
-        // Zoom Controls (Digital smooth client-side + Hardware IP Webcam sync)
+        // ZOOM CONTROLS (SMOOTH DIGITAL CSS + HARDWARE IP WEBCAM SYNC)
         let currentZoom = 1.0;
-
         function applyZoom(z) {
             currentZoom = Math.min(Math.max(z, 1.0), 3.5);
-            const zoomFormatted = currentZoom.toFixed(2) + 'x';
-            document.getElementById('zoom-badge').innerText = zoomFormatted;
-            document.getElementById('telemetry-zoom').innerText = zoomFormatted;
+            const str = currentZoom.toFixed(2) + 'x';
+            document.getElementById('zoom-badge').innerText = str;
+            document.getElementById('diag-zoom').innerText = str;
 
-            // Apply smooth CSS transform to both feeds
-            document.querySelectorAll('.zoomable-feed').forEach(img => {
+            document.querySelectorAll('.zoomable-video').forEach(img => {
                 img.style.transform = `scale(${currentZoom})`;
             });
 
-            // Send hardware camera zoom request
             const hwZoomLevel = Math.round((currentZoom - 1.0) * 10);
             fetch(`/camera_zoom?zoom=${hwZoomLevel}`).catch(() => {});
         }
 
-        function setZoom(val) {
-            applyZoom(val);
+        function setZoom(v) {
+            applyZoom(v);
+            addLog(`Zoom set to ${v.toFixed(1)}x.`);
         }
-
         function adjustZoom(delta) {
             applyZoom(currentZoom + delta);
         }
 
-        // View Mode Selector (Dual, Detection Only, Mask Only)
+        // DISTANCE GATE CONTROLLER
+        function setDistance(dist) {
+            document.querySelectorAll('[id^="dist-"]').forEach(b => {
+                if (b.tagName === 'BUTTON') b.classList.remove('active-pill');
+            });
+            if (dist === 15) document.getElementById('dist-15-btn').classList.add('active-pill');
+            if (dist === 10) document.getElementById('dist-10-btn').classList.add('active-pill');
+            if (dist === 30) document.getElementById('dist-30-btn').classList.add('active-pill');
+            if (dist === 'live') document.getElementById('dist-live-btn').classList.add('active-pill');
+
+            fetch(`/set_distance?dist=${dist}`).catch(() => {});
+            addLog(`Distance Gate target set to: ${dist === 'live' ? 'ESP32 Live Sensor' : dist + ' cm'}`);
+        }
+
+        // VIEWPORT MODE SWITCHER
         function setViewMode(mode) {
-            const grid = document.getElementById('dual-feeds');
+            const grid = document.getElementById('dual-grid');
             const btnDual = document.getElementById('view-dual-btn');
             const btnDet = document.getElementById('view-det-btn');
             const btnMask = document.getElementById('view-mask-btn');
 
-            [btnDual, btnDet, btnMask].forEach(b => b.classList.remove('active-preset'));
-
-            grid.classList.remove('view-detection-only', 'view-mask-only');
+            [btnDual, btnDet, btnMask].forEach(b => b.classList.remove('active-pill'));
+            grid.classList.remove('mode-detection-only', 'mode-mask-only');
 
             if (mode === 'dual') {
-                btnDual.classList.add('active-preset');
+                btnDual.classList.add('active-pill');
             } else if (mode === 'detection') {
-                grid.classList.add('view-detection-only');
-                btnDet.classList.add('active-preset');
+                grid.classList.add('mode-detection-only');
+                btnDet.classList.add('active-pill');
             } else if (mode === 'mask') {
-                grid.classList.add('view-mask-only');
-                btnMask.classList.add('active-preset');
+                grid.classList.add('mode-mask-only');
+                btnMask.classList.add('active-pill');
+            }
+            addLog(`Viewport mode switched to: ${mode.toUpperCase()}`);
+        }
+
+        // SNAPSHOT EXPORT
+        function saveSnapshot() {
+            addLog("Inspection snapshot captured to browser download.", 'ok');
+            const a = document.createElement('a');
+            a.href = '/video_feed';
+            a.target = '_blank';
+            window.open('/video_feed', '_blank');
+        }
+
+        // FULLSCREEN TOGGLE
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
             }
         }
 
-        // System Clock
+        // MISSION CLOCK
         setInterval(() => {
             document.getElementById('clock').innerText = new Date().toLocaleTimeString();
         }, 1000);

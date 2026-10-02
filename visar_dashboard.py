@@ -200,6 +200,8 @@ def process_vision():
         # In-Range: Analyze contours for cracks
         new_boxes = []
         crack_count = 0
+        critical_count = 0
+        major_count = 0
         severity = "CLEAN"
 
         for cnt in contours:
@@ -212,10 +214,12 @@ def process_vision():
                     color = (255, 0, 255) # Purple for Critical Voids
                     label = f"CRITICAL VOID [{int(area)}px]"
                     severity = "CRITICAL SPALLING"
+                    critical_count += 1
                 else:
                     color = (0, 0, 255) # Red for Detection
                     label = f"MAJOR CRACK [{int(area)}px]"
                     severity = "CRACK DETECTED"
+                    major_count += 1
                 
                 new_boxes.append((x, y, w, h, color, label))
 
@@ -224,6 +228,8 @@ def process_vision():
         if now - last_emit_time > 0.1:
             socketio.emit('telemetry_vision', {
                 'cracks': crack_count,
+                'critical': critical_count,
+                'major': major_count,
                 'severity': severity,
                 'in_range': True,
                 'distance': current_distance
